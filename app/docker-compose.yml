@@ -3,7 +3,7 @@ services:
     build: ./api
     dockerfile : Dockerfile
   depends_on:
-  db:
+    db:
     condition : service_healthy
     restart : true
     environment:
