@@ -40,6 +40,22 @@ app.MapGet("/weatherforecast", () =>
 })
 .WithName("GetWeatherForecast");
 
+app.MapGet("/tax/price/tax/", () =>
+{
+    double price = 10.00;
+    int taxPercentage = 10;
+    double final = price + (price * taxPercentage / 100);
+
+    return Results.Json(new
+    {
+        price = price.ToString("F2"),
+        tax = $"{taxPercentage}%",
+        final = final.ToString("F2")
+    });
+})
+.WithName("GetTaxCalculation");
+
+
 app.Run();
 
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
