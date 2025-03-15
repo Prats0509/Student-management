@@ -1,53 +1,111 @@
-// package com.example.studentmanagementsystem.controller;
+  using Microsoft.AspNetCore.Mvc;
+    using Microsoft.AspNetCore.Identity;
+    using Microsoft.IdentityModel.Tokens;
+    using System.IdentityModel.Tokens.Jwt;
+    using System.Security.Claims;
+    using System.Text;
+    using Microsoft.AspNetCore.Authorization;
 
-// import com.example.studentmanagementsystem.model.User;
-// import com.example.studentmanagementsystem.service.UserService;
-// import org.springframework.http.ResponseEntity;
-// import org.springframework.security.core.Authentication;
-// import org.springframework.security.core.context.SecurityContextHolder;
-// import org.springframework.web.bind.annotation.*;
-// import java.util.List;
 
-// @RestController
-// @RequestMapping("/users")
-// public class UserController {
-//     private final UserService userService;
+namespace API.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    [Authorize] // Ensures only authenticated users can access
+    public class UserController : ControllerBase
+    {
+        private readonly UserManager<IdentityUser> _userManager;
 
-//     public UserController(UserService userService) {
-//         this.userService = userService;
-//     }
+        public UserController(UserManager<IdentityUser> userManager)
+        {
+            _userManager = userManager;
+        }
 
-//     @PostMapping("/create")
-//     public ResponseEntity<User> createUser(@RequestBody User user) {
-//         return ResponseEntity.ok(userService.createUser(user));
-//     }
+        // Endpoint: Create User (Admin Only)
+        [HttpPost("create")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Create([FromBody] RegisterModel model)
+        {
+            var user = new IdentityUser { UserName = model.Email, Email = model.Email };
+            var result = await _userManager.CreateAsync(user, model.Password);
 
-//     @GetMapping("/list")
-//     public ResponseEntity<List<User>> listUsers() {
-//         return ResponseEntity.ok(userService.getAllUsers());
-//     }
+            if (result.Succeeded)
+            {
+                await _userManager.AddToRoleAsync(user, "User");
+                return Ok(new { message = "User created successfully" });
+            }
 
-//     @PutMapping("/edit/{id}")
-//     public ResponseEntity<User> editUser(@PathVariable Long id, @RequestBody User user) {
-//         return ResponseEntity.ok(userService.updateUser(id, user));
-//     }
+            return BadRequest(result.Errors);
+        }
 
-//     @DeleteMapping("/delete/{id}")
-//     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
-//         userService.deleteUser(id);
-//         return ResponseEntity.noContent().build();
-//     }
+        // Endpoint: List All Users (Admin Only)
+        [HttpGet("list")]
+        [Authorize(Roles = "Admin")]
+        public IActionResult List()
+        {
+            var users = _userManager.Users.Select(u => new { u.Id, u.Email }).ToList();
+            return Ok(users);
+        }
 
-//     @GetMapping("/{id}")
-//     public ResponseEntity<User> getUserById(@PathVariable Long id) {
-//         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-//         String role = auth.getAuthorities().iterator().next().getAuthority();
-//         String username = auth.getName();
-//         User user = userService.getUserById(id);
-        
-//         if ("ROLE_ADMIN".equals(role) || user.getUsername().equals(username)) {
-//             return ResponseEntity.ok(user);
-//         }
-//         return ResponseEntity.status(403).build();
-//     }
-// }
+        // Endpoint: Edit User (Admin Only)
+        [HttpPut("edit/{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Edit(string id, [FromBody] RegisterModel model)
+        {
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null) return NotFound("User not found.");
+
+            user.Email = model.Email;
+            user.UserName = model.Email;
+
+            var updateResult = await _userManager.UpdateAsync(user);
+            if (!updateResult.Succeeded)
+                return BadRequest(updateResult.Errors);
+
+            if (!string.IsNullOrEmpty(model.Password))
+            {
+                var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+                var passwordResult = await _userManager.ResetPasswordAsync(user, token, model.Password);
+                if (!passwordResult.Succeeded)
+                    return BadRequest(passwordResult.Errors);
+            }
+
+            return Ok(new { message = "User updated successfully." });
+        }
+
+        // Endpoint: Delete User (Admin Only)
+        [HttpDelete("delete/{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Delete(string id)
+        {
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null) return NotFound("User not found.");
+
+            var result = await _userManager.DeleteAsync(user);
+            if (result.Succeeded)
+                return Ok(new { message = "User deleted successfully." });
+
+            return BadRequest(result.Errors);
+        }
+
+
+        // Endpoint: Get User by ID (Admin or Own User)
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(string id)
+        {
+            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var isAdmin = User.IsInRole("Admin");
+
+            if (!isAdmin && currentUserId != id)
+                return Forbid();
+
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null)
+                return NotFound();
+
+            return Ok(new { user.Id, user.Email });
+        }
+
+    }
+
+}

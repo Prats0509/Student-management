@@ -48,6 +48,23 @@ namespace API.Controllers
 
             return BadRequest(result.Errors);
         }
+        // Remove after setup ///////////////////////////////////////////////////////////
+
+        [HttpPost("register-admin")] // Temporary endpoint, remove after use!
+        public async Task<IActionResult> RegisterAdmin([FromBody] RegisterModel model)
+        {
+            var user = new IdentityUser { UserName = model.Email, Email = model.Email };
+            var result = await _userManager.CreateAsync(user, model.Password);
+
+            if (result.Succeeded){
+                await _userManager.AddToRoleAsync(user, "Admin");
+                return Ok(new { message = "Admin registered successfully" });
+            }
+
+            return BadRequest(result.Errors);
+        }
+
+        ////////////////////////////////////////////////////////////////////////////////
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginModel model)

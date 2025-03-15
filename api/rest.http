@@ -20,5 +20,57 @@ GET http://localhost:5016/protected HTTP/1.1
 content-type: application/json
 Authorization: Bearer {{authToken}}
 
+### AUTH - Register Admin (Temporary)
+POST http://localhost:5016/auth/register-admin HTTP/1.1
+content-type: application/json
 
+{
+    "email": "admin@admin.com",
+    "password": "Admin@12345"
+}
 
+###
+
+# @name login
+POST http://localhost:5016/auth/login HTTP/1.1
+content-type: application/json
+
+{
+    "email": "admin@admin.com",
+    "password": "Admin@12345"
+}
+
+###
+@token = {{ login.response.body.token }}
+### UserController.Create (Admin only)
+
+POST http://localhost:5016/api/User/create
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "email": "newuser1@example.com",
+  "password": "NewUser1Password123!"
+}
+
+### UserController.List (Admin only)
+GET http://localhost:5016/api/User/list
+Authorization: Bearer {{token}}
+
+### UserController.Edit (Admin only)
+PUT http://localhost:5016/api/User/edit/088b0237-21f7-435f-9632-8e62f84b7f31
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "email": "updateduser@example.com",
+  "password": "UpdatedPassword123!"
+}
+
+### UserController.Delete (Admin only)
+DELETE http://localhost:5016/api/User/delete/088b0237-21f7-435f-9632-8e62f84b7f31
+Authorization: Bearer {{token}}
+
+### UserController.GetById (Admin or Own user)
+GET http://localhost:5016/api/User/47bfb3fd-1a71-41a0-a062-75e8a41e4141
+Authorization: Bearer {{token}}
