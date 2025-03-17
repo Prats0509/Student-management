@@ -10,6 +10,17 @@ var builder = WebApplication.CreateBuilder(args);
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection"); // string
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policyBuilder =>
+    {
+        policyBuilder
+            .AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader();
+    });
+});
+
 builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlite(connectionString));
 
 builder.Services.AddIdentity<IdentityUser, IdentityRole>()
@@ -81,6 +92,8 @@ if(!app.Environment.IsDevelopment()){
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseCors("AllowAll");
+
 
 app.MapControllers();
 
