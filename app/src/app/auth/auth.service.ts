@@ -16,11 +16,11 @@ export class AuthService {
   constructor(private http: HttpClient, private router: Router) {}
 
   register(user: { email: string, password: string }): Observable<any> {
-    return this.http.post(`${environment.apiUrl}/register`, user);
+    return this.http.post(`${environment.apiUrl}/auth/register`, user);
   }
 
   login(user: { email: string, password: string }): Observable<any> {
-    return this.http.post(`${environment.apiUrl}/login`, user).pipe(
+    return this.http.post(`${environment.apiUrl}/auth/login`, user).pipe(
       tap((res: any) => {
         localStorage.setItem('token', res.token);
         this.loggedIn.next(true);
